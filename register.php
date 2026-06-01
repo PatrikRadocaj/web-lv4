@@ -6,20 +6,22 @@ require_once __DIR__ . '/includes/functions.php';
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_csrf();
-    $username = trim($_POST['username'] ?? '');
-    $password = $_POST['password'] ?? '';
+    $username = trim((string) ($_POST['username'] ?? ''));
+    $password = (string) ($_POST['password'] ?? '');
 
     if (strlen($username) < 3 || strlen($password) < 6) {
-        $error = 'Korisnicko ime mora imati barem 3 znaka, a lozinka barem 6 znakova.';
+        $error = 'Korisničko ime mora imati barem 3 znaka, a lozinka barem 6 znakova.';
+    } elseif (text_length($username) > 80) {
+        $error = 'Korisničko ime može imati najviše 80 znakova.';
     } else {
         try {
             $stmt = db()->prepare('INSERT INTO users (username, password_hash, role) VALUES (?, ?, "user")');
             $stmt->execute([$username, password_hash($password, PASSWORD_DEFAULT)]);
-            flash('Registracija je uspjesna. Sada se mozete prijaviti.');
+            flash('Registracija je uspješna. Sada se možete prijaviti.');
             header('Location: login.php');
             exit;
         } catch (PDOException) {
-            $error = 'Korisnicko ime je vec zauzeto.';
+            $error = 'Korisničko ime je već zauzeto.';
         }
     }
 }
@@ -31,8 +33,8 @@ require __DIR__ . '/includes/header.php';
 <section class="form-panel">
     <form method="post" class="stacked">
         <input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>">
-        <label>Korisnicko ime
-            <input name="username" required autocomplete="username">
+        <label>Korisničko ime
+            <input name="username" minlength="3" maxlength="80" required autocomplete="username">
         </label>
         <label>Lozinka
             <input type="password" name="password" required autocomplete="new-password" minlength="6">

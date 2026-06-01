@@ -119,6 +119,24 @@ header .podnaslov {
     display: block;
 }
 
+.nav-form {
+    margin: 0;
+}
+
+.nav-form button {
+    background: none;
+    border: 0;
+    color: white;
+    cursor: pointer;
+    font: inherit;
+    font-weight: bold;
+    padding: 0;
+}
+
+.nav-form button:hover {
+    color: #ffd27f;
+}
+
 .glavna-navigacija a:hover {
     color: #ffd27f;
 }
@@ -175,6 +193,7 @@ main {
 
 .tablica-clanak {
     background: white;
+    min-width: 0;
     padding: 20px;
     border-radius: 10px;
 }
@@ -263,6 +282,36 @@ table {
     min-width: 700px;
 }
 
+.cart-panel .table-wrapper {
+    overflow-x: hidden;
+}
+
+.cart-panel table {
+    width: 100%;
+    min-width: 0;
+    table-layout: auto;
+}
+
+.cart-panel th,
+.cart-panel td {
+    padding: 8px 10px;
+}
+
+.cart-panel th:nth-child(2),
+.cart-panel td:nth-child(2) {
+    width: 70px;
+}
+
+.cart-panel th:nth-child(3),
+.cart-panel td:nth-child(3) {
+    width: 110px;
+}
+
+.cart-panel .inline-form button {
+    padding: 6px 10px;
+    font-size: 0.95rem;
+}
+
 .rating-cell {
     display: flex;
     flex-direction: column;
@@ -304,10 +353,40 @@ table {
     overflow-x: auto;
 }
 
+/* Layout for films list and cart side-by-side */
+.films-and-cart {
+    display: block;
+}
+
 .cart-message {
     margin-top: 14px;
     color: #115293;
     font-weight: 600;
+}
+
+.cart-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.cart-actions form {
+    margin: 0;
+}
+
+.secondary {
+    background: #555;
+}
+
+.secondary:hover {
+    background: #333;
+}
+
+.low-rating {
+    color: #b22222;
+    display: block;
+    font-size: 0.85rem;
 }
 
 th,
@@ -437,6 +516,75 @@ section[aria-labelledby="naslov-info"] h2 {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+}
+
+button {
+    background: #f08a00;
+    border: 0;
+    border-radius: 6px;
+    color: white;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+    padding: 9px 13px;
+}
+
+button:hover {
+    background: #d57600;
+}
+
+.galerija {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 18px;
+}
+
+.galerija > h2 {
+    grid-column: 1 / -1;
+    margin-bottom: 0;
+}
+
+.galerija_slika {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 7px rgba(0, 0, 0, 0.08);
+    margin: 0;
+    overflow: hidden;
+    padding: 14px;
+}
+
+.galerija_slika img {
+    aspect-ratio: 4 / 3;
+    border-radius: 7px;
+    object-fit: cover;
+    width: 100%;
+}
+
+.galerija_slika figcaption {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-top: 10px;
+    text-align: center;
+}
+
+.galerija_slika form {
+    display: grid;
+    gap: 8px;
+}
+
+.save-comment {
+    justify-self: start;
+}
+
+.photo-comments {
+    border-top: 1px solid #ddd;
+    margin-top: 14px;
+    padding-top: 10px;
+}
+
+.photo-comments h3,
+.photo-comments p {
+    margin: 0 0 7px;
 }
 
 .stars {
@@ -582,5 +730,18 @@ section[aria-labelledby="naslov-info"] h2 {
 @media (max-width: 768px) {
     .form-grid {
         grid-template-columns: 1fr;
+    }
+
+    .glavni-sadrzaj {
+        grid-template-columns: 1fr;
+    }
+
+    .films-and-cart {
+        grid-template-columns: 1fr;
+    }
+
+    .chart {
+        justify-content: flex-start;
+        overflow-x: auto;
     }
 }

@@ -7,18 +7,21 @@ require_login();
 $errors = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'upload') {
     check_csrf();
-    $titleInput = trim($_POST['title'] ?? '');
+    $titleInput = trim((string) ($_POST['title'] ?? ''));
     $file = $_FILES['photo'] ?? null;
+    $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png'];
 
+    if (text_length($titleInput) > 160) {
+        $errors[] = 'Naziv slike može imati najviše 160 znakova.';
+    }
     if (!$file || $file['error'] !== UPLOAD_ERR_OK) {
-        $errors[] = 'Slika nije ispravno ucitana.';
-    } elseif ($file['size'] > 5 * 1024 * 1024) {
-        $errors[] = 'Slika ne smije biti veca od 5MB.';
+        $errors[] = 'Slika nije ispravno učitana.';
+    } elseif (($file['size'] ?? 0) > 5 * 1024 * 1024) {
+        $errors[] = 'Slika ne smije biti veća od 5MB.';
     } else {
         $info = finfo_open(FILEINFO_MIME_TYPE);
         $mime = finfo_file($info, $file['tmp_name']);
         finfo_close($info);
-        $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png'];
         if (!isset($allowed[$mime])) {
             $errors[] = 'Dozvoljene su samo JPEG i PNG slike.';
         }
@@ -33,13 +36,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'uploa
         $filename = bin2hex(random_bytes(12)) . '.' . $extension;
         $target = $uploadDir . '/' . $filename;
         if (move_uploaded_file($file['tmp_name'], $target)) {
-            $stmt = db()->prepare('INSERT INTO photos (title, path, source) VALUES (?, ?, "upload")');
-            $stmt->execute([$titleInput ?: pathinfo($file['name'], PATHINFO_FILENAME), 'uploads/' . $filename]);
-            flash('Slika je dodana u galeriju.');
-            header('Location: gallery.php');
-            exit;
+            try {
+                $stmt = db()->prepare('INSERT INTO photos (title, path, source) VALUES (?, ?, "upload")');
+                $stmt->execute([$titleInput ?: pathinfo((string) $file['name'], PATHINFO_FILENAME), 'uploads/' . $filename]);
+                $photoId = (int) db()->lastInsertId();
+                flash('Slika je dodana u galeriju.');
+                header('Location: gallery.php#photo-' . $photoId);
+                exit;
+            } catch (PDOException) {
+                unlink($target);
+                $errors[] = 'Spremanje podataka slike nije uspjelo.';
+            }
         }
-        $errors[] = 'Spremanje slike nije uspjelo.';
+        if (!$errors) {
+            $errors[] = 'Spremanje slike nije uspjelo.';
+        }
     }
 }
 
@@ -54,10 +65,22 @@ $photos = db()->query(
 )->fetchAll();
 
 $userRatingsStmt = db()->prepare('SELECT photo_id, rating, comment FROM photo_ratings WHERE user_id = ?');
-$userRatingsStmt->execute([current_user()['id']]);
+$userRatingsStmt->execute([(int) current_user()['id']]);
 $userRatings = [];
 foreach ($userRatingsStmt->fetchAll() as $row) {
     $userRatings[(int) $row['photo_id']] = $row;
+}
+
+$comments = [];
+$commentsStmt = db()->query(
+    'SELECT r.photo_id, r.comment, u.username
+     FROM photo_ratings r
+     JOIN users u ON u.id = r.user_id
+     WHERE r.comment IS NOT NULL AND r.comment <> ""
+     ORDER BY r.rated_at DESC'
+);
+foreach ($commentsStmt->fetchAll() as $row) {
+    $comments[(int) $row['photo_id']][] = $row;
 }
 
 $title = 'Ocjenjivanje fotografija';
@@ -78,23 +101,30 @@ require __DIR__ . '/includes/header.php';
     <form method="post" enctype="multipart/form-data" class="form-grid">
         <input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>">
         <input type="hidden" name="action" value="upload">
-        <label>Naziv slike <input name="title" placeholder="Naziv"></label>
+        <label>Naziv slike <input name="title" maxlength="160" placeholder="Naziv"></label>
         <label>JPEG/PNG do 5MB <input type="file" name="photo" accept="image/jpeg,image/png" required></label>
-        <button type="submit">Ucitaj sliku</button>
+        <button type="submit">Učitaj sliku</button>
     </form>
 </section>
 
 <section class="galerija">
     <h2>Galerija s ocjenama</h2>
     <?php foreach ($photos as $photo): ?>
-        <?php $mine = $userRatings[(int) $photo['id']] ?? null; ?>
+        <?php
+            $mine = $userRatings[(int) $photo['id']] ?? null;
+            $rawPath = (string) $photo['path'];
+            $safePath = str_replace(["\0", '\\'], ['', '/'], $rawPath);
+            if (str_contains($safePath, '..')) {
+                continue;
+            }
+        ?>
         <figure class="galerija_slika" id="photo-<?= h($photo['id']) ?>">
             <a href="#slika<?= h($photo['id']) ?>">
-                <img src="<?= h($photo['path']) ?>" alt="<?= h($photo['title']) ?>" loading="lazy">
+                <img src="<?= h($safePath) ?>" alt="<?= h($photo['title']) ?>" loading="lazy">
             </a>
             <figcaption><?= h($photo['title']) ?></figcaption>
             <p class="rating-summary">
-                Prosjek: <?= $photo['avg_rating'] ? h($photo['avg_rating']) : 'nema' ?>
+                Prosjek: <?= $photo['avg_rating'] !== null ? h($photo['avg_rating']) : 'nema' ?>
                 (<?= h($photo['rating_count']) ?>)
             </p>
             <form method="post" action="rate_photo.php">
@@ -108,11 +138,24 @@ require __DIR__ . '/includes/header.php';
                 <label class="stacked">Komentar
                     <input name="comment" maxlength="255" value="<?= h($mine['comment'] ?? '') ?>">
                 </label>
+                <?php if ($mine): ?>
+                    <button class="save-comment" type="submit" name="rating" value="<?= h($mine['rating']) ?>">Spremi komentar</button>
+                <?php else: ?>
+                    <small>Ocijenite sliku kako biste spremili komentar.</small>
+                <?php endif; ?>
             </form>
+            <?php if (!empty($comments[(int) $photo['id']])): ?>
+                <section class="photo-comments" aria-label="Komentari">
+                    <h3>Komentari</h3>
+                    <?php foreach ($comments[(int) $photo['id']] as $comment): ?>
+                        <p><strong><?= h($comment['username']) ?>:</strong> <?= h($comment['comment']) ?></p>
+                    <?php endforeach; ?>
+                </section>
+            <?php endif; ?>
         </figure>
         <div id="slika<?= h($photo['id']) ?>" class="lightbox">
             <a href="#" class="zatvori">x</a>
-            <img src="<?= h($photo['path']) ?>" alt="<?= h($photo['title']) ?>">
+            <img src="<?= h($safePath) ?>" alt="<?= h($photo['title']) ?>">
         </div>
     <?php endforeach; ?>
 </section>

@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= h($title ?? 'LV4 Videoteka') ?></title>
-    <link rel="stylesheet" href="assets/lv4.css">
+    <link rel="stylesheet" href="assets/lv4.css?v=<?= h(filemtime(__DIR__ . '/../assets/lv4.css')) ?>">
 </head>
 <body>
 <header>
@@ -29,12 +29,18 @@
                 <li><a href="index.php">Početna</a></li>
                 <li><a href="grafikon.php">Grafikon</a></li>
                 <li><a href="gallery.php">Galerija</a></li>
+                <li><a href="cart.php">Košarica (<?= count(cart_film_ids()) ?>)</a></li>
                 <li><a href="my_videoteka.php">Moja videoteka</a></li>
                 <?php if (is_admin()): ?>
                     <li><a href="admin_films.php">Admin filmovi</a></li>
                 <?php endif; ?>
                 <?php if (is_logged_in()): ?>
-                    <li><a href="logout.php">Odjava (<?= h(current_user()['username']) ?>)</a></li>
+                    <li>
+                        <form method="post" action="logout.php" class="nav-form">
+                            <input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>">
+                            <button type="submit">Odjava (<?= h(current_user()['username']) ?>)</button>
+                        </form>
+                    </li>
                 <?php else: ?>
                     <li><a href="login.php">Prijava</a></li>
                     <li><a href="register.php">Registracija</a></li>
@@ -45,5 +51,5 @@
 </header>
 <main>
 <?php if ($message = flash()): ?>
-    <p class="notice"><?= h($message) ?></p>
+    <p class="<?= h($message['type']) ?>"><?= h($message['message']) ?></p>
 <?php endif; ?>

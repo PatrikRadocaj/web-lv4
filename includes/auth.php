@@ -53,7 +53,7 @@ function csrf_token(): string
 function check_csrf(): void
 {
     $token = $_POST['csrf'] ?? '';
-    if (!hash_equals($_SESSION['csrf'] ?? '', $token)) {
+    if (!is_string($token) || !hash_equals($_SESSION['csrf'] ?? '', $token)) {
         http_response_code(400);
         exit('Neispravan sigurnosni token.');
     }

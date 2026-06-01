@@ -6,8 +6,8 @@ require_once __DIR__ . '/includes/functions.php';
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_csrf();
-    $username = trim($_POST['username'] ?? '');
-    $password = $_POST['password'] ?? '';
+    $username = trim((string) ($_POST['username'] ?? ''));
+    $password = (string) ($_POST['password'] ?? '');
 
     $stmt = db()->prepare('SELECT * FROM users WHERE username = ?');
     $stmt->execute([$username]);
@@ -20,10 +20,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'username' => $user['username'],
             'role' => $user['role'],
         ];
+        $_SESSION['film_cart'] = [];
         header('Location: index.php');
         exit;
     }
-    $error = 'Neispravno korisnicko ime ili lozinka.';
+    $error = 'Neispravno korisničko ime ili lozinka.';
 }
 
 $title = 'Prijava korisnika';
@@ -33,8 +34,8 @@ require __DIR__ . '/includes/header.php';
 <section class="form-panel">
     <form method="post" class="stacked">
         <input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>">
-        <label>Korisnicko ime
-            <input name="username" required autocomplete="username">
+        <label>Korisničko ime
+            <input name="username" maxlength="80" required autocomplete="username">
         </label>
         <label>Lozinka
             <input type="password" name="password" required autocomplete="current-password">

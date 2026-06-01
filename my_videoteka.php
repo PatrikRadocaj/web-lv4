@@ -7,10 +7,11 @@ require_login();
 $user = current_user();
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'remove') {
     check_csrf();
+    $filmId = (int) ($_POST['film_id'] ?? 0);
     $stmt = db()->prepare('DELETE FROM desired_films WHERE user_id = ? AND film_id = ?');
-    $stmt->execute([$user['id'], (int) ($_POST['film_id'] ?? 0)]);
-    flash('Film je uklonjen iz osobne videoteke.');
-    header('Location: my_videoteka.php');
+    $stmt->execute([(int) $user['id'], $filmId]);
+    flash($stmt->rowCount() ? 'Film je uklonjen iz osobne videoteke.' : 'Film nije pronađen u osobnoj videoteci.', $stmt->rowCount() ? 'notice' : 'error');
+    header('Location: my_videoteka.php#videoteka');
     exit;
 }
 
@@ -23,12 +24,12 @@ $films = $stmt->fetchAll();
 $title = 'Moja videoteka';
 require __DIR__ . '/includes/header.php';
 ?>
-<section class="tablica-clanak">
+<section class="tablica-clanak" id="videoteka">
     <h2>Trajno spremljeni filmovi</h2>
     <p>Ukupno odabranih filmova: <?= count($films) ?></p>
     <div class="table-wrapper">
         <table>
-            <thead><tr><th>Naslov</th><th>Godina</th><th>Zanr</th><th>Ocjena</th><th>Ukloni</th></tr></thead>
+            <thead><tr><th>Naslov</th><th>Godina</th><th>Žanr</th><th>Ocjena</th><th>Ukloni</th></tr></thead>
             <tbody>
             <?php foreach ($films as $film): ?>
                 <tr>
